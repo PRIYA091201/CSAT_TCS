@@ -1,0 +1,19 @@
+{
+  "name": "@csat/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./types":           "./src/types/index.ts",
+    "./constants":       "./src/constants/index.ts",
+    "./supabase/client": "./src/supabase/client.ts",
+    "./supabase/types":  "./src/supabase/database.types.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

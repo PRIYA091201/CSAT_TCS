@@ -1,0 +1,152 @@
+{
+  "common": {
+    "store_name": "The Chennai Silks",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deactivate": "Deactivate",
+    "activate": "Activate",
+    "create": "Create",
+    "loading": "Loading…",
+    "error": "Something went wrong.",
+    "no_data": "No data yet.",
+    "confirm": "Confirm",
+    "revoke": "Revoke",
+    "export": "Export CSV",
+    "close": "Close"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "zones": "Zones",
+    "kiosks": "Kiosks",
+    "tokens": "Tokens",
+    "export": "Export",
+    "md_view": "Overview",
+    "heatmap": "Section Heatmap",
+    "trends": "Trend Analysis",
+    "logout": "Sign out"
+  },
+  "auth": {
+    "sign_in": "Sign in",
+    "email": "Email",
+    "password": "Password",
+    "signing_in": "Signing in…",
+    "invalid_credentials": "Invalid email or password.",
+    "title": "Admin Login",
+    "subtitle": "The Chennai Silks — Staff Portal"
+  },
+  "zones": {
+    "title": "Zone Configuration",
+    "new_zone": "New Zone",
+    "zone_name": "Zone Name",
+    "zone_type": "Zone Type",
+    "product_section": "Product Section",
+    "token_ttl": "Token TTL (minutes)",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "billing": "Billing",
+    "browse": "Browse",
+    "none": "None (billing)",
+    "created": "Zone created.",
+    "updated": "Zone updated."
+  },
+  "kiosks": {
+    "title": "Kiosk Management",
+    "new_kiosk": "Provision Kiosk",
+    "kiosk_name": "Kiosk Name",
+    "zone": "Zone",
+    "branch": "Branch",
+    "last_seen": "Last seen",
+    "never_seen": "Never connected",
+    "status": "Status",
+    "credentials_title": "Kiosk Credentials",
+    "credentials_note": "Save these now. The password will not be shown again.",
+    "email_label": "Email",
+    "password_label": "Password",
+    "provisioned": "Kiosk provisioned.",
+    "deactivated": "Kiosk deactivated.",
+    "confirm_deactivate": "Deactivate this kiosk? The tablet will immediately lose the ability to mint tokens."
+  },
+  "tokens": {
+    "title": "Token Management",
+    "token_id": "Token ID",
+    "zone": "Zone",
+    "status": "Status",
+    "expires": "Expires",
+    "ttl_remaining": "TTL remaining",
+    "created": "Created",
+    "revoke_confirm": "Revoke this token? Any customer with this QR will be blocked.",
+    "revoked": "Token revoked.",
+    "active": "Active",
+    "used": "Used",
+    "expired": "Expired",
+    "revoked_status": "Revoked"
+  },
+  "dashboard": {
+    "total_submissions": "Total submissions",
+    "happiness_ratio": "Happiness ratio",
+    "response_rate": "Response rate",
+    "top_concern": "Top concern",
+    "across_all": "across all dimensions",
+    "tokens_used": "{used} of {total} tokens used",
+    "unhappy_this_week": "{pct}% unhappy this week",
+    "vs_last_period": "{direction}{pct}% vs last period",
+    "date_today": "Today",
+    "date_week": "This week",
+    "date_month": "This month",
+    "date_custom": "Custom",
+    "emotion_pulse": "Emotion pulse",
+    "all_zones": "All zones combined",
+    "billing_zone": "Billing zone",
+    "browse_zone": "Browse zone",
+    "submissions": "{count} submissions",
+    "seven_day_trend": "7-day trend",
+    "happy": "Happy",
+    "okay": "Okay",
+    "unhappy": "Unhappy",
+    "pricing": "Pricing",
+    "design": "Design / look",
+    "handling": "Handling / feel",
+    "overall": "Overall experience"
+  },
+  "heatmap": {
+    "title": "Section heatmap",
+    "top_concerns": "Top concerns this week",
+    "legend_green": "60%+ happy",
+    "legend_amber": "40-59% happy",
+    "legend_red": "Under 40% happy",
+    "insights": {
+      "pricing": {
+        "red": "Only {happy}% happy. {unhappy}% actively unhappy. {count} submissions.",
+        "amber": "Only {happy}% happy. Pricing perceived as high. {count} submissions."
+      },
+      "design": {
+        "red": "Only {happy}% happy. {unhappy}% unhappy with appearance. {count} submissions.",
+        "amber": "Only {happy}% happy. Design getting mixed reactions. {count} submissions."
+      },
+      "handling": {
+        "red": "Only {happy}% happy. {unhappy}% unhappy. Customers may dislike fabric feel.",
+        "amber": "Only {happy}% happy. Handling needs attention. {count} submissions."
+      },
+      "overall": {
+        "red": "Only {happy}% happy overall. {unhappy}% left dissatisfied. {count} submissions.",
+        "amber": "Only {happy}% happy overall. {count} submissions."
+      }
+    }
+  },
+  "export": {
+    "title": "Export Data",
+    "date_from": "From",
+    "date_to": "To",
+    "zone_filter": "Zone (optional)",
+    "all_zones": "All zones",
+    "download": "Download CSV",
+    "downloading": "Preparing…",
+    "success": "Export downloaded."
+  },
+  "md": {
+    "role_label": "MD / Owner view (read-only)"
+  }
+}

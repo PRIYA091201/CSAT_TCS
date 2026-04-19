@@ -1,0 +1,27 @@
+# ── Environment variables — NEVER commit ─────────────────────
+.env
+.env.local
+.env.*.local
+apps/**/.env
+apps/**/.env.local
+
+# ── Dependencies ──────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+
+# ── Build outputs ─────────────────────────────────────────────
+dist/
+build/
+.vite/
+
+# ── Supabase local dev ────────────────────────────────────────
+supabase/.branches/
+supabase/.temp/
+
+# ── OS / editor ───────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/settings.json
+*.suo
+*.user

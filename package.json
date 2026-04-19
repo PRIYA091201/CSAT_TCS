@@ -1,0 +1,13 @@
+{
+  "name": "csat",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:admin":    "pnpm --filter @csat/admin-dashboard dev",
+    "build:admin":  "pnpm --filter @csat/admin-dashboard build",
+    "dev:all":      "pnpm --parallel --filter './apps/*' dev"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

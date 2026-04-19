@@ -1,0 +1,660 @@
+# QR Feedback Experience — specs.md
+## The Chennai Silks | Version 2.0 | April 2026
+
+---
+
+## 1. Product overview
+
+The QR Feedback Experience is a customer satisfaction capture system for The Chennai Silks retail store. Customers provide emoji-based feedback (happy / okay / unhappy) across four dimensions: pricing, design, handling, and overall experience. The system operates across two zones — billing and browse — each with a distinct QR distribution method but a unified per-transaction token architecture.
+
+**MVP scope**: 1 branch (The Chennai Silks), 2 zones (billing + browse), English only, no POS integration.
+
+---
+
+## 2. Tech stack
+
+| Layer | Technology | Rationale |
+|-------|-----------|-----------|
+| Frontend | React + TypeScript + Tailwind CSS | Single codebase for 3 apps. Type safety. Utility-first styling. |
+| Build tool | Vite | Fast HMR, native ESM, optimized production builds. TypeScript/React support out of the box. |
+| UI components | shadcn/ui | Accessible components built on Radix UI. Copy-paste into codebase for full ownership and customization. |
+| Backend | Deno TypeScript (Supabase Edge Functions) | Built-in auth, RLS for RBAC, Edge Functions for token logic, Realtime for kiosk. Type-safe backend. Eliminates custom API for solo dev. |
+| Database | Supabase (PostgreSQL + Auth + Realtime) | Managed Postgres with built-in auth and RLS. Realtime subscriptions for kiosk. |
+| QR generation | qrcode.react | Client-side QR rendering. No server-side image generation needed. |
+| State management | TanStack Query (react-query) | Server state caching, background refetch, optimistic updates for dashboard. |
+| Validation | Zod | Runtime type validation for all API responses. |
+| Deployment | Vercel (frontend) + Supabase (backend) | Zero-config deploys. Supabase handles DB + auth + functions. |
+
+**Monorepo structure**: 3 apps (`customer-form`, `kiosk`, `admin-dashboard`) + 1 shared package (`shared` for types, constants, Supabase client).
+
+---
+
+## 3. User roles and permissions
+
+### 3.1 Customer (anonymous)
+- **Who**: End user in-store (purchased or browsing)
+- **Auth**: None. Anonymous access via QR scan.
+- **Can do**: Submit feedback via QR scan. One submission per token.
+- **Cannot do**: View dashboard, configure anything, access admin features.
+
+### 3.2 Kiosk Service Accounts
+- **Who**: Dedicated Supabase Auth users, one per physical tablet. MVP: 2 accounts — one for browse zone, one for billing zone.
+- **Auth**: Email + password, **no 2FA**. Machine identity, not a human login.
+- **Session**: Persistent refresh token stored on device. Survives reboots. Never expires unless revoked.
+- **Role**: `kiosk` (stored in `app_metadata`). Enforced via RLS.
+- **Can do**: Call `mint-token` Edge Function only. No other DB access.
+- **Cannot do**: Access admin dashboard, read feedback data, revoke tokens, change zone config.
+- **Independence**: Each kiosk session is fully independent. Admin logging off has zero effect on any kiosk.
+- **Provisioning**: Admin creates kiosk from the admin dashboard (name + branch + zone + section) → system creates Supabase Auth user → admin sees credentials once → IT stores credentials in tablet `.env` → done permanently.
+
+**MVP kiosk accounts:**
+
+| Account | Zone | Section config | Tablet |
+|---------|------|---------------|--------|
+| `kiosk-browse@chennaisilks.local` | Browse | Set in admin panel (e.g. Sarees, Shirts, Trousers) | Tablet 1 |
+| `kiosk-billing@chennaisilks.local` | Billing | Set in admin panel. MVP: admin-generated QR. Post-MVP: auto from POS via SKU. | Tablet 2 / counter |
+
+### 3.3 Store Admin
+- **Who**: Store manager or operations staff
+- **Auth**: Email + password + TOTP 2FA via Supabase Auth. Human login, session-based.
+- **Session**: Short-lived JWT. Expires. Must re-login. Cannot access kiosk app.
+- **Can do**: Configure zones, manage kiosks, view zone-specific dashboard, export CSV, revoke tokens, manage product sections.
+- **Cannot do**: Access MD cross-zone comparison views (role-separated via RLS). Cannot mint tokens directly.
+
+### 3.4 MD / Owner
+- **Who**: Managing Director or business owner
+- **Auth**: Email + password + TOTP 2FA via Supabase Auth. Human login, session-based.
+- **Session**: Short-lived JWT. Expires. Must re-login. Cannot access kiosk app.
+- **Can do**: View all zone dashboards, cross-zone comparison, section heatmap, trend analysis, export CSV.
+- **Cannot do**: Configure zones, manage kiosks, revoke tokens. Strictly read-only. Cannot mint tokens directly.
+
+---
+
+## 4. System components
+
+### 4.1 Customer feedback form (`apps/customer-form`)
+- Mobile-responsive web app opened via QR scan
+- URL format: `/f/{zone_id}/{token_id}?pos_section=optional`
+- No authentication required
+- All inputs are tap-based. Zero keyboard input from customer.
+- Store name displayed: "The Chennai Silks" (no logo for MVP)
+- Target completion: under 45 seconds (billing), under 30 seconds (browse)
+
+### 4.2 Kiosk app (`apps/kiosk`)
+- Tablet web app displayed in-store on a single dedicated tablet (MVP: 1 tablet, browse zone only)
+- **Auth**: Auto-signs in on boot as the kiosk service account (`kiosk` role). Session persists across reboots. No manual login ever required after IT setup.
+- **Three states**: idle, QR display, and offline
+- **Visual theme**: dark background throughout. Matches customer form and admin dashboard.
+- **Idle state**:
+  - Top-left: store name (bold) + section name (muted subtitle) — persistent context
+  - Centre: large smiley icon (green outline)
+  - Headline: "We'd love your feedback!"
+  - Subtitle: "Help us serve you better. It takes less than a minute."
+  - Full-width green CTA button: "Tap to share feedback"
+  - Footer: "Your response is anonymous" (tiny muted text)
+- **QR display state**: on customer tap, calls `mint-token` Edge Function → generates QR → shows live countdown
+- **Offline state**: internet connectivity lost → banner shown: "Connection lost. Please try again in a moment." → tap button disabled → polls connectivity every 10 seconds → resumes automatically when reconnected. No broken QRs, no expired tokens issued during outage.
+- **Token minting**: always requires active internet. Tokens are minted on-demand at tap time via Edge Function. No pre-minting, no local token generation. QR URL contains `token_id` that must exist in DB before customer's phone validates it.
+- **QR display state layout**:
+  - Top-left: store name + section name (same as idle, persistent)
+  - Top-right: `···` menu (IT/admin access only — not visible to customers)
+  - Centre: large QR code block
+  - Below QR: "Scan with your phone camera" (bold) + "This QR is just for you" (muted)
+  - Countdown line: "Expires in 28s" counting down to 0 in real time
+  - On expiry: countdown replaced by "● Expired — returning to welcome" (red dot, red text) → brief pause → returns to idle
+- **30-second window**: customer must scan QR within 30 seconds or kiosk returns to idle. Token remains active for 10 minutes total after minting.
+- **Token hard expiry**: 10 minutes after mint. If customer has form open but has not submitted by 10 minutes, they are redirected to the timeout page.
+- After 30s display timeout or token consumption: auto-return to idle via Supabase Realtime
+- Kiosk config embeds: zone_id, product_section (passed to customer form via URL params)
+- Fullscreen mode, no browser chrome
+- **Admin independence**: admin logging off their dashboard has zero effect on kiosk operation. Kiosk session is a separate Supabase Auth identity.
+
+### 4.3 Admin dashboard (`apps/admin-dashboard`)
+- Browser-based web app for Store Admin and MD/Owner
+- Role-based views enforced by Supabase RLS
+- Store Admin view: zone config, kiosk management, zone dashboard, CSV export, token revocation
+- MD/Owner view: cross-zone comparison, section heatmap, trend analysis, CSV export (read-only)
+
+---
+
+## 5. Token architecture
+
+Both zones use a unified per-transaction token model. Every QR encodes a unique, single-use token. No shared rotating QR. No cron-based rotation. No timer-based rotation.
+
+### 5.1 Token state machine
+
+```
+Minted → Active (instant, on creation)
+Active → Used (customer submits feedback)
+Active → Expired (TTL elapses without submission)
+Active → Revoked (admin manually revokes)
+Used, Expired, Revoked = terminal states (no transitions out)
+```
+
+### 5.2 Zone-specific token behaviour
+
+| Aspect | Billing zone | Browse zone |
+|--------|-------------|-------------|
+| QR distribution | Printed on invoice at POS checkout | Displayed on kiosk tablet on customer tap |
+| Token trigger | Invoice creation (MVP: admin-generated; future: POS API) | Customer taps "Tap to share feedback" on kiosk |
+| Token TTL | 30 minutes hard expiry | 30 seconds (kiosk QR display) → idle reset. 10 minutes hard expiry after token minted. |
+| Kiosk display window | N/A | 30 seconds. If not scanned, kiosk returns to idle. Token still active for 10 min total. |
+| Submission window | 30 minutes from invoice | 10 minutes from token mint. Mid-form expiry redirects to timeout page. |
+| Anti-spam | Single-use token (inherent) | Single-use token (inherent) |
+| Product section source | MVP: auto from kiosk/zone config set in admin panel. Post-MVP: auto from POS SKU data. Customer never selects manually. | Auto from kiosk config (zone knows its section). Customer never selects manually. |
+
+---
+
+## 6. Data contracts
+
+### 6.1 zones
+
+| Field | Type | Constraints | Notes |
+|-------|------|------------|-------|
+| zone_id | UUID | PK, auto-generated | |
+| zone_name | TEXT | NOT NULL | e.g., "Billing Counter 1", "Sarees Section" |
+| zone_type | TEXT | NOT NULL, CHECK IN ('billing', 'browse') | Drives conditional logic in customer form |
+| branch_id | TEXT | NOT NULL, DEFAULT 'chennai-main' | Future-proofing for multi-branch |
+| product_section | TEXT | FK → product_sections, nullable | Set for browse kiosks. Null for billing. |
+| token_ttl_min | INTEGER | NOT NULL, DEFAULT 30 | Time-to-live in minutes for tokens |
+| is_active | BOOLEAN | NOT NULL, DEFAULT true | Soft delete / disable |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
+
+### 6.2 kiosks
+
+| Field | Type | Constraints | Notes |
+|-------|------|------------|-------|
+| kiosk_id | UUID | PK, auto-generated | |
+| kiosk_name | TEXT | NOT NULL | e.g., "Browse - Sarees", "Billing Counter 1" |
+| zone_id | UUID | FK → zones, NOT NULL | Which zone this kiosk belongs to |
+| auth_user_id | UUID | FK → auth.users, NOT NULL, UNIQUE | The Supabase Auth user created for this kiosk |
+| branch_id | TEXT | NOT NULL, DEFAULT 'chennai-main' | Which branch |
+| is_active | BOOLEAN | NOT NULL, DEFAULT true | Admin can deactivate remotely |
+| last_seen_at | TIMESTAMPTZ | nullable | Updated by kiosk heartbeat. Lets admin see online/offline status. |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
+| created_by | UUID | FK → auth.users, NOT NULL | Admin who provisioned this kiosk |
+
+**Provisioning flow**: Admin fills kiosk form in dashboard → Edge Function calls Supabase Admin API to create Auth user with role `kiosk` in `app_metadata` → inserts row in `kiosks` table → returns credentials once to admin → admin hands to IT → IT sets tablet `.env`. Credentials never stored in `kiosks` table.
+
+### 6.3 tokens
+
+| Field | Type | Constraints | Notes |
+|-------|------|------------|-------|
+| token_id | UUID | PK, auto-generated | Encoded in QR URL |
+| zone_id | UUID | FK → zones, NOT NULL | Which zone issued this token |
+| status | TEXT | NOT NULL, DEFAULT 'active', CHECK IN ('active','used','expired','revoked') | See state machine |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | Mint time |
+| expires_at | TIMESTAMPTZ | NOT NULL | created_at + zone.token_ttl_min |
+| used_at | TIMESTAMPTZ | nullable | Set when feedback submitted |
+| revoked_at | TIMESTAMPTZ | nullable | Set when admin revokes |
+| revoked_by | UUID | FK → auth.users, nullable | Admin user ID if revoked |
+
+### 6.4 product_sections
+
+| Field | Type | Constraints | Notes |
+|-------|------|------------|-------|
+| section_id | TEXT | PK | Slug: 'sarees', 'shirts', 'trousers', 'kids_wear', 'accessories', 'fabrics' |
+| display_name | TEXT | NOT NULL | e.g., "Sarees", "Kids Wear" |
+| is_active | BOOLEAN | NOT NULL, DEFAULT true | Admin can enable/disable |
+| sort_order | INTEGER | NOT NULL, DEFAULT 0 | Display order in customer form grid |
+
+### 6.5 feedback_records
+
+| Field | Type | Constraints | Notes |
+|-------|------|------------|-------|
+| feedback_id | UUID | PK, auto-generated | |
+| token_id | UUID | FK → tokens, NOT NULL | Links to the token used |
+| zone_id | UUID | FK → zones, NOT NULL | Which zone |
+| branch_id | TEXT | NOT NULL, DEFAULT 'chennai-main' | Denormalized for query speed |
+| zone_type | TEXT | NOT NULL | Denormalized: 'billing' or 'browse' |
+| gender | TEXT | nullable, CHECK IN ('male','female','other','prefer_not_to_say') | Optional. Null if skipped. |
+| age_group | TEXT | nullable, CHECK IN ('18-25','26-35','36-45','46+') | Optional. Null if skipped. |
+| product_section | TEXT | FK → product_sections, NOT NULL | Always from kiosk/zone config. Never from manual customer selection. |
+| rating_price | TEXT | NOT NULL, CHECK IN ('happy','neutral','sad') | Required |
+| rating_design | TEXT | NOT NULL, CHECK IN ('happy','neutral','sad') | Required |
+| rating_handling | TEXT | NOT NULL, CHECK IN ('happy','neutral','sad') | Required |
+| rating_overall | TEXT | NOT NULL, CHECK IN ('happy','neutral','sad') | Required. Customer's gut feeling, NOT derived. |
+| status | TEXT | NOT NULL, DEFAULT 'submitted', CHECK IN ('submitted','flagged') | |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | Submission time |
+
+### 6.6 audit_logs
+
+Immutable log of all admin-initiated state changes. INSERT-only (no UPDATE, no DELETE ever).
+
+| Field | Type | Constraints | Notes |
+|-------|------|------------|-------|
+| log_id | UUID | PK, auto-generated | |
+| user_id | UUID | FK → auth.users, NOT NULL | Admin or MD who performed the action |
+| action | TEXT | NOT NULL | e.g. 'revoke_token', 'create_zone', 'provision_kiosk', 'export_csv' |
+| resource_type | TEXT | nullable | e.g. 'token', 'zone', 'kiosk', 'export' |
+| resource_id | UUID | nullable | ID of the affected resource |
+| context | JSONB | nullable | Structured data: old/new values, reason, row counts |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
+
+**When to log:**
+- Token revocation (`action='revoke_token'`, `resource_id=token_id`)
+- Zone creation/update (`action='create_zone'` / `'update_zone'`, `resource_id=zone_id`)
+- Kiosk provisioning (`action='provision_kiosk'`, `resource_id=kiosk_id`)
+- CSV exports (`action='export_csv'`, `context={date_range, zone_filter, row_count}`)
+
+**Never log:** Customer feedback submissions, token minting (high volume), token validation checks.
+
+**RLS**: Admin and MD can SELECT. No INSERT policy for users — only Edge Functions via service role. No UPDATE or DELETE policies.
+
+---
+
+## 7. Edge Functions (API layer)
+
+> All admin-action Edge Functions write to `audit_logs` via service role. No direct client INSERT to audit_logs is permitted.
+
+### 7.1 `mint-token`
+- **Trigger**: Kiosk tap (browse zone) or admin generates billing QR (billing zone)
+- **Input**: `{ zone_id: string }`
+- **Logic**: Verify caller has `kiosk` role (browse) or `admin` role (billing) → Validate zone exists and is active → Resolve `product_section` from zone config (never from client input) → Create token with status='active', expires_at = now() + zone.token_ttl_min → Return token_id, expires_at, zone details
+- **Output**: `{ token_id: string, expires_at: string, zone_id: string, zone_type: string, product_section: string }`
+- **Auth**: Authenticated. Kiosk role or Admin role. Anonymous callers rejected.
+- **Key rule**: `product_section` is resolved server-side from zone config. Client cannot pass or override it.
+
+### 7.2 `provision-kiosk` (admin only)
+- **Trigger**: Admin creates a new kiosk from the admin dashboard
+- **Input**: `{ kiosk_name: string, zone_id: string, branch_id: string }`
+- **Logic**: Verify caller has `admin` role → Validate zone exists → Auto-generate kiosk email + secure password → Call Supabase Admin API to create Auth user with `app_metadata: { role: 'kiosk' }` → Insert row in `kiosks` table → Write to audit_logs → Return credentials (shown once, never stored)
+- **Output**: `{ kiosk_id: string, email: string, password: string }` — password shown to admin once only
+- **Auth**: Admin role only. MD cannot provision kiosks.
+
+### 7.3 `validate-token`
+- **Trigger**: Customer form loads after QR scan
+- **Input**: `{ token_id: string }`
+- **Logic**: Check token exists → Check status === 'active' → Check now() < expires_at → Return zone info
+- **Output**: `{ valid: boolean, zone_id?: string, zone_type?: string, product_section?: string, store_name?: string, error_code?: 'expired' | 'used' | 'revoked' | 'invalid' }`
+- **Auth**: Anonymous (public endpoint)
+- **HTTP status design**: Always returns HTTP 200 for known token states. Frontend checks `data.valid` — not HTTP status — to decide which screen to show. 4xx only for malformed input or server errors.
+
+### 7.4 `submit-feedback`
+- **Trigger**: Customer taps submit on ratings screen
+- **Input**: `{ token_id: string, gender?: string, age_group?: string, rating_price: string, rating_design: string, rating_handling: string, rating_overall: string }`
+- **Logic**: Re-validate token (active + not expired) → Resolve `product_section` and `zone_id` from token's zone config (server-side, not from client) → Insert feedback_record → Update token status to 'used', set used_at → Return success
+- **Output**: `{ success: boolean, error_code?: string }`
+- **Auth**: Anonymous (public endpoint)
+- **Atomicity**: Token validation + feedback insert + token update must be in a single transaction
+- **Key rule**: `product_section` is never accepted from the client. Always resolved from the token → zone → product_section chain server-side.
+
+### 7.5 `expire-tokens` (scheduled)
+- **Trigger**: Supabase cron, every 5 minutes (configured in `supabase/config.toml`)
+- **Auth**: Cron job — no HTTP auth, no JWT, no bearer token. Uses service role key only.
+- **Logic**: UPDATE tokens SET status='expired' WHERE status='active' AND now() > expires_at
+- **No user-facing endpoint. Never add JWT validation to this function.**
+
+---
+
+## 8. Customer-facing flow
+
+### 8.1 Billing zone flow (3 screens, 5-7 taps, <45 seconds)
+
+**Zone and product section are pre-configured in admin panel. Customer never selects them.**
+
+1. **QR scan**: Customer receives QR on printed invoice after purchase. QR encodes `zone_id` + `token_id`. Zone config (including product section) is resolved server-side on form load. Customer scans with phone camera. Opens mobile browser.
+2. **Token validation** (invisible): Server checks token is active and not expired. Resolves zone details (zone_type, product_section) from zone config. On failure: friendly error screen (dead end, no form).
+3. **Screen 1 — Demographics** (optional): Gender (4 pill options) + age group (4 pill options). Skip button always visible. Skipping sets both to null.
+4. **Screen 2 — Emoji ratings**: Single screen, all 4 rows visible.
+   - Top: store name (small) + "How was your experience?" (bold headline) + "Tap one per row" (muted subtitle)
+   - 4 dimension rows: Pricing / Design / look / Handling / feel / Overall experience
+   - Each row: 3 square cards side by side. Each card: coloured emoji icon on top + label below. Green (😊 Happy), Amber (😐 Okay), Red (😞 Unhappy). Unselected = dark card, no highlight. Selected = coloured border + coloured background tint.
+   - Visual divider between "Handling / feel" and "Overall experience" rows.
+   - Submit button: full-width, below all rows. Disabled state text: "Select all ratings to submit" (grey/muted). Enabled state: button turns green, text changes to "Submit feedback".
+   - No numeric counter. Button text is the only completion signal.
+5. **Screen 3 — Confirmation**: "Thank you for your feedback!" + "The Chennai Silks". Token status → used. No further action.
+
+**Post-MVP**: POS integration auto-mints token on invoice creation. SKU maps to product_section automatically. Demographics may be pre-populated from POS data.
+
+### 8.2 Browse zone flow (3 screens, 5-7 taps, <30 seconds to scan)
+
+**Zone and product section are pre-configured in admin panel. Customer never selects them.**
+
+1. **Kiosk idle state**: Tablet displays "We'd love your feedback!" + The Chennai Silks + section name + "Tap to share feedback" button + "Your response is anonymous" note. Section name comes from kiosk's zone config.
+2. **Kiosk QR state**: On tap, API mints token (10-min TTL). Zone config (zone_id + product_section) embedded in token at mint time. QR displayed with live countdown: "Expires in 28s… 27s… 26s…" counting down from 30. When countdown reaches 0: status line switches to "● Expired — returning to welcome" (red dot), kiosk returns to idle after a brief pause. Token stays active for 10 minutes total in case customer scanned just before reset.
+3. **Customer scans kiosk QR with phone.**
+4. **Token validation** (invisible): Server resolves zone details from token. If expired: timeout page shown. No form.
+5. **Screen 1 — Demographics** (optional): Gender (4 pill options) + age group (4 pill options). Skip button always visible. Product section is NOT shown to customer — already in token from kiosk config.
+6. **Screen 2 — Emoji ratings**: Same layout as billing. Customer has up to 10 minutes from token mint to submit. If 10-min window elapses mid-form: redirect to timeout page.
+7. **Screen 3 — Confirmation**: "Thank you for your feedback!" + "The Chennai Silks". Kiosk detects token consumed via Realtime, returns to idle.
+
+### 8.3 Error states and timeout behaviour
+
+| Condition | Zone | User sees | System behaviour |
+|-----------|------|----------|-----------------|
+| Token expired on load (billing) | Billing | Timeout page: "Your feedback window has closed. Purchased customers have 30 minutes from billing." | No form. Dead end. |
+| Token expired on load (browse) | Browse | Timeout page: "Your feedback window has closed. Please request a new QR at the kiosk." | No form. Dead end. |
+| Token expires mid-form (browse) | Browse | Redirect to timeout page: "Time is up! You had 10 minutes to submit. Please request a new QR at the kiosk." | Form is abandoned. Token already expired. Dead end. |
+| Token expires mid-form (billing) | Billing | Timeout page: "Your feedback window has closed. Purchased customers have 30 minutes from billing." | Form is abandoned. Dead end. |
+| Token already used — re-scan | Both | Thank you page: "Thanks! We have already received your feedback." | Friendly. No form. |
+| Token revoked | Both | "This feedback link is no longer active." | No form. Dead end. |
+| Invalid/malformed token | Both | "Something went wrong. Please try scanning the QR again." | Log error. No form. |
+
+**Key rules:**
+- Timeout page and thank-you page are distinct screens with different messages.
+- Timeout = token expired without submission → show timeout message.
+- Already used = token consumed → show thank-you message.
+- Mid-form expiry detection: customer form polls token status every 60 seconds. On expiry detected, redirect immediately to timeout page.
+
+---
+
+## 9. Admin dashboard — Store Admin view
+
+### 9.1 Zone configuration
+- Create/edit zones: zone name, zone type, product section, token TTL
+- Activate/deactivate zones
+- Manage product section enum: add, rename, reorder, deactivate sections
+
+### 9.2 Kiosk management
+- Create kiosk: name + branch + zone + section → system auto-creates Supabase Auth user (`kiosk` role) → admin sees credentials once → hands to IT
+- View all kiosks with: name, zone, section, branch, active status, last seen timestamp
+- Deactivate kiosk: disables the kiosk Auth user in Supabase → tablet loses ability to mint tokens
+- Each kiosk's zone config (section, TTL) is managed via the linked zone — not separately per kiosk
+- **Admin cannot change kiosk credentials** after creation. If tablet is lost or compromised: deactivate the kiosk, create a new one.
+
+### 9.2 Zone dashboard
+- Metric cards: total submissions (today/week/month), happiness ratio, response rate
+- Emotion pulse: 4 horizontal bars (price, design, handling, overall) with happy/okay/unhappy split
+- Submission trend: 7-day and 30-day sparklines
+- Date range filter
+
+### 9.3 Token management
+- View active tokens with remaining TTL
+- Revoke individual tokens (sets status to 'revoked', logs admin user and timestamp)
+- View token audit log
+
+### 9.4 CSV export
+- Export aggregated metrics: submissions by zone, section, dimension, date
+- Non-PII only. Filtered by current dashboard view (date range, zone).
+
+---
+
+## 10. Admin dashboard — MD / Owner view
+
+### 10.1 Overview dashboard (landing page)
+- **Question it answers**: "How is my store doing right now?"
+- **Role label**: "MD / Owner view (read-only)" shown persistently top-right
+- **Date filter**: pill tabs — Today / This week / This month / Custom. Not a dropdown.
+- **Metric cards** (4 equal-width cards in a row):
+  - Total submissions + trend vs last period (e.g. "+18% vs last week")
+  - Happiness ratio: % happy across all dimensions + "across all dimensions" subtitle
+  - Response rate: submissions vs tokens minted (e.g. "247 of 588 tokens used")
+  - Top concern: worst-performing dimension name + "X% unhappy this week" subtitle
+- **Emotion pulse — all zones combined**: 4 horizontal stacked bars (Pricing, Design, Handling, Overall). Each bar: green (happy) + amber (okay) + red (unhappy). Percentage shown right-aligned = **happy %** always. Colour of percentage text = green if ≥60%, amber if 40-59%, red if <40%.
+- **Zone comparison**: two equal side-by-side cards — "Billing zone" and "Browse zone". Each card shows submission count subtitle + mini emotion pulse bars (same 4 dimensions, same colour rules).
+- **7-day trend**: dual-axis chart — submission volume (blue area, left axis) + happiness ratio % (green dashed line, right axis). X-axis = Mon–Sun day labels.
+- **Visual theme**: dark background throughout (`#1a1a1a` or equivalent). All text light on dark.
+
+### 10.2 Section heatmap
+- **Question it answers**: "Which product section needs attention? What do I fix first?"
+- Grid: sections (rows) × dimensions (columns). Cell value = happy %. Cell colour = green ≥60% happy, amber 40-59%, red <40%.
+- Clickable cells: drill into section-dimension detail (demographic split, trend, zone breakdown)
+- Auto-sorted "Top concerns" list below the grid: worst section-dimension pairs ranked by happy % ascending (lowest happy % = rank 1)
+- Filters: by section, by zone, by date
+
+**Top concerns list format** (per item):
+- Numbered badge: ①②③
+- Title: `{Section} — {dimension}` e.g. "Fabrics — pricing"
+- Description line: hardcoded template string based on section + dimension combination. See insight templates below.
+- Happy % shown right-aligned in red text
+
+**Insight template rules** (hardcoded, MVP):
+- Template is chosen by: `dimension` + happy % band (under 40% = red, 40-59% = amber)
+- Templates per dimension:
+
+| Dimension | Red template (<40% happy) | Amber template (40-59% happy) |
+|-----------|--------------------------|-------------------------------|
+| pricing | "Only {happy}% happy. {unhappy}% actively unhappy. {count} submissions." | "Only {happy}% happy. Pricing perceived as high. {count} submissions." |
+| design | "Only {happy}% happy. {unhappy}% unhappy with appearance. {count} submissions." | "Only {happy}% happy. Design getting mixed reactions. {count} submissions." |
+| handling | "Only {happy}% happy. {unhappy}% unhappy. Customers may dislike fabric feel." | "Only {happy}% happy. Handling needs attention. {count} submissions." |
+| overall | "Only {happy}% happy overall. {unhappy}% left dissatisfied. {count} submissions." | "Only {happy}% happy overall. {count} submissions." |
+
+- If a section has the highest submission count among red cells: append " ({count} submissions — highest volume)."
+- All `{happy}`, `{unhappy}`, `{count}` values are runtime-substituted from query results.
+- Templates live in `en.json` under `heatmap.insights.*` keys. No template logic in components.
+
+### 10.3 Trend analysis
+- **Question it answers**: "Is sentiment improving? Did my last change work?"
+- Sentiment timeline: daily/weekly happiness ratio per dimension (line chart)
+- Before/after comparison: pick two date ranges, side-by-side bars
+- Volume vs sentiment: dual-axis (submission count + happiness overlay)
+- Peak hours heatmap: hour-of-day × day-of-week, coloured by submission volume and sentiment
+
+### 10.4 Export
+- CSV export with current filters applied
+- Summary snapshot: copy-pasteable text with key metrics, top 3 problem areas, trend direction
+
+---
+
+## 11. User stories with acceptance criteria
+
+### MUST HAVE — Ship day one
+
+#### S-C1: Customer submits feedback via billing zone QR
+**Role**: Customer | **Priority**: Must Have
+
+> **Note**: Product section is pre-configured in the admin panel and resolved server-side from zone config. The customer never sees or selects a product section.
+
+- **Given** a customer has a printed invoice with a valid QR code
+  **When** they scan the QR with their phone camera
+  **Then** the mobile browser opens the feedback form with token validated server-side
+
+- **Given** the token is valid and active
+  **When** the form loads
+  **Then** demographics screen appears with optional gender and age group pill selectors and a visible skip button
+
+- **Given** demographics completed or skipped
+  **When** customer proceeds
+  **Then** emoji rating screen shows all 4 rows on a single screen with submit disabled until all selected. No product section selection screen is shown — product_section is resolved server-side from zone config.
+
+- **Given** all 4 ratings selected and submit tapped
+  **When** API saves the feedback record
+  **Then** token status is set to 'used', confirmation screen shows "Thank you for your feedback!" with The Chennai Silks name
+
+#### S-C2: Customer submits feedback via browse zone kiosk QR
+**Role**: Customer | **Priority**: Must Have
+
+- **Given** a kiosk tablet displays the idle welcome screen in a store section
+  **When** a customer taps "Tap to share feedback"
+  **Then** the kiosk mints a fresh single-use token via API and displays a QR code with a **30-second countdown timer**. The token itself remains active for 10 minutes total after minting.
+
+- **Given** the customer scans the kiosk QR with their phone
+  **When** the form loads
+  **Then** demographics screen appears (optional). Product section is NOT shown — auto-populated from kiosk zone config
+
+- **Given** demographics completed or skipped
+  **When** customer proceeds
+  **Then** emoji rating screen shows all 4 rows on a single screen
+
+- **Given** all 4 ratings selected and submit tapped
+  **When** API saves the feedback record
+  **Then** token status set to 'used', kiosk returns to idle state, confirmation shows on phone
+
+#### S-C3: Customer sees correct message based on token state
+**Role**: Customer | **Priority**: Must Have
+
+- **Given** a customer opens a form URL with an expired token (timeout, billing zone)
+  **When** the page loads
+  **Then** timeout page shown: "Your feedback window has closed. Purchased customers have 30 minutes from billing." No form rendered.
+
+- **Given** a customer opens a form URL with an expired token (timeout, browse zone)
+  **When** the page loads
+  **Then** timeout page shown: "Your feedback window has closed. Please request a new QR at the kiosk." No form rendered.
+
+- **Given** a customer is mid-form and the 10-minute browse token expires
+  **When** the form detects token expiry (polling every 60 seconds)
+  **Then** customer is redirected to timeout page: "Time is up! You had 10 minutes to submit. Please request a new QR at the kiosk."
+
+- **Given** a customer is mid-form and the 30-minute billing token expires
+  **When** the form detects token expiry
+  **Then** customer is redirected to timeout page: "Your feedback window has closed. Purchased customers have 30 minutes from billing."
+
+- **Given** a customer scans an already-used token (re-scan, both zones)
+  **When** the form URL loads
+  **Then** thank-you page shown: "Thanks! We have already received your feedback." Friendly. No form rendered.
+
+- **Given** a customer tries to submit on a form whose token is already used (double-tap submit)
+  **When** the submit API call returns token-already-used error
+  **Then** customer sees thank-you page: "Thanks! We have already received your feedback."
+
+- **Given** a customer scans a revoked token
+  **When** the form URL loads
+  **Then** message shown: "This feedback link is no longer active." No form rendered.
+
+- **Given** a customer opens the form URL without logging in
+  **When** the page loads
+  **Then** no authentication prompt appears. Form loads directly.
+
+#### S-C4: Kiosk auto-resets after 30-second QR display window
+**Role**: System (Kiosk) | **Priority**: Must Have
+
+- **Given** a kiosk is displaying a QR code with a 30-second countdown
+  **When** the 30-second timer expires without the QR being scanned
+  **Then** the kiosk returns to idle welcome screen. The token remains active for its full 10-minute TTL in case the customer scanned just before reset.
+
+- **Given** a kiosk QR is scanned and feedback is submitted
+  **When** the token status changes to 'used'
+  **Then** the kiosk detects consumption via Supabase Realtime and returns to idle immediately.
+
+#### S-C5: Billing zone token auto-expires after 30 minutes
+**Role**: System | **Priority**: Must Have
+
+- **Given** a billing zone token is minted and status is active
+  **When** 30 minutes elapse without a feedback submission
+  **Then** the expire-tokens cron function sets token status to 'expired'
+
+- **Given** a purchased customer tries to open their invoice QR after 30 minutes
+  **When** the form URL loads
+  **Then** timeout page is shown with the billing zone timeout message. No form rendered.
+
+#### S-C6: Browse zone token auto-expires after 10 minutes
+**Role**: System | **Priority**: Must Have
+
+- **Given** a browse zone token is minted when customer taps the kiosk
+  **When** 10 minutes elapse without a feedback submission
+  **Then** the expire-tokens cron function sets token status to 'expired'
+
+- **Given** a browse zone customer has the form open at the 10-minute mark
+  **When** the form's 60-second status poll detects expiry
+  **Then** the customer is immediately redirected to the timeout page
+
+#### S-A1: Store Admin configures zones
+**Role**: Store Admin | **Priority**: Must Have
+
+- **Given** a Store Admin is logged in with 2FA
+  **When** they create or edit a zone
+  **Then** they can set zone name, zone type (billing/browse), product section (for browse), and token TTL
+
+- **Given** a zone config is saved
+  **When** new tokens are minted for that zone
+  **Then** tokens use the updated TTL and zone settings
+
+#### S-A2: Store Admin views zone dashboard
+**Role**: Store Admin | **Priority**: Must Have
+
+- **Given** a Store Admin is logged in
+  **When** they open the dashboard
+  **Then** zone-specific metrics are shown: total submissions, rating breakdowns by dimension, product section distribution, and time-based trends
+
+#### S-A3: MD/Owner views cross-zone comparison
+**Role**: MD / Owner | **Priority**: Must Have
+
+- **Given** an MD is logged in with read-only access
+  **When** they open the dashboard
+  **Then** they see side-by-side metrics for billing and browse zones with cross-zone comparison charts, section heatmap, and trend analysis
+
+#### S-A4: Data governance and privacy
+**Role**: System | **Priority**: Must Have
+
+- **Given** a feedback submission arrives
+  **When** it is stored
+  **Then** only non-PII fields are saved. No device fingerprints, IP addresses, or personal identifiers stored. RBAC enforced via Supabase RLS.
+
+#### S-A5: MVP deployment scope
+**Role**: System | **Priority**: Must Have
+
+- **Given** the system is deployed for MVP
+  **When** all components are running
+  **Then** one branch (The Chennai Silks), two zones, kiosk app, customer form, and admin dashboard are all operational
+
+### SHOULD HAVE — Sprint 2-3
+
+#### S-B1: Store Admin exports CSV
+**Role**: Store Admin / MD | **Priority**: Should Have
+
+- **Given** an admin or MD requests a data export
+  **When** export is triggered from the dashboard
+  **Then** a CSV file downloads with aggregated metrics, non-PII only, filtered by date range and zone
+
+#### S-B2: Store Admin revokes a token
+**Role**: Store Admin | **Priority**: Should Have
+
+- **Given** a Store Admin identifies a suspicious token
+  **When** they trigger "Revoke" from the admin panel
+  **Then** token status set to 'revoked', any in-flight form blocked, action logged in audit trail
+
+#### S-B3: Admin API endpoints
+**Role**: Store Admin | **Priority**: Should Have
+
+- **Given** an admin calls API endpoints
+  **When** responses are returned
+  **Then** responses include success status and current state. All actions authenticated and logged.
+
+### COULD HAVE — Post-MVP
+
+#### S-P1: Anomaly detection and auto-revoke
+- Requires real data to define anomaly rules. Manual revocation covers edge cases for MVP.
+
+#### S-P2: POS integration for billing zone
+- Auto-mint token on invoice creation. Auto-populate product section from POS transaction data via `?pos_section=`.
+
+#### S-P3: Tamil language support
+- All UI labels in Tamil. ~30 strings in `ta.json` locale file.
+
+### WON'T HAVE — This release
+
+- Geofencing validation
+- Multi-branch support
+- Native mobile app (iOS/Android)
+- Auto-rotation of shared QR codes
+- Real-time anomaly detection engine
+- Dark mode for admin dashboard
+
+---
+
+## 12. Non-functional requirements
+
+| Category | Requirement |
+|----------|------------|
+| Performance | API latency < 200ms. Token minting < 500ms. QR generation < 1s on kiosk. Customer form loads < 2s on 3G. |
+| Availability | 99.9% uptime for feedback API. Kiosk works offline for idle state (reconnects for minting). |
+| Security | 2FA for admin/MD. RBAC via Supabase RLS. TLS 1.3 in transit. Encryption at rest (Supabase default). Audit logs for all admin actions (immutable). |
+| Privacy | No PII stored. No IP addresses. No device fingerprints. Data minimization. Retention policy enforced. |
+| Accessibility | WCAG 2.1 AA. All tap targets ≥ 48dp. Keyboard navigable admin. Screen-reader friendly labels. |
+| Observability | Structured logs for token mint/validate/consume. Metrics for submission rates and error rates. Alerting on sustained errors. |
+| Internationalisation | English only MVP. Locale-ready: all 30 UI strings in `en.json`. Adding `ta.json` is a config change, not a code change. |
+
+---
+
+## 13. Removed from original spec (with rationale)
+
+| Item | Rationale |
+|------|-----------|
+| Auto-rotate QR per zone | Per-transaction tokens eliminate rotation. Each QR is single-use. |
+| Manual rotation | Simplified to revocation only. No rotation concept exists. |
+| Geofence radius | Poor indoor GPS accuracy in retail. Single-use tokens provide anti-spam. |
+| rotation_interval_min | Replaced by token_ttl_min. Tokens minted on-demand. |
+| Anomaly detection (MVP) | Moved to Could Have. Needs real data. Manual revocation covers edge cases. |
+| device_token / fingerprinting | Replaced by single-use tokens. No need for device tracking when each QR is one-time-use. |
+
+---
+
+## 14. Open questions (resolve before development)
+
+1. Data retention window: how long are feedback records kept before purge?
+2. Preferred 2FA: Supabase built-in TOTP or external SSO?
+3. Full product section taxonomy for The Chennai Silks
+4. CSV export scope: aggregated only or anonymized per-submission breakdowns?
+5. Kiosk hardware: specific tablet model and screen size?
+6. POS system details for future integration: which POS software? API availability?

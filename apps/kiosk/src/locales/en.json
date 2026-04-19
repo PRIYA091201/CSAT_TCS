@@ -1,0 +1,20 @@
+{
+  "kiosk": {
+    "idle": {
+      "store_name": "The Chennai Silks",
+      "headline": "We'd love your feedback!",
+      "subtitle": "Help us serve you better. It takes less than a minute.",
+      "cta": "Tap to share feedback",
+      "footer": "Your response is anonymous"
+    },
+    "qr": {
+      "scan_instruction": "Scan with your phone camera",
+      "scan_subtitle": "This QR is just for you",
+      "expires_in": "Expires in {seconds}s",
+      "expired": "Expired — returning to welcome"
+    },
+    "offline": {
+      "banner": "Connection lost. Please try again in a moment."
+    }
+  }
+}

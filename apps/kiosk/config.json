@@ -1,0 +1,10 @@
+{
+  "baseUrl": "https://your-domain.example",
+  "zone_id": "<ZONE_ID>",
+  "zone_label": "Browse Zone",
+  "store_name": "The Chennai Silks",
+  "mintTokenUrl": "https://<SUPABASE_URL>.supabase.co/functions/v1/mint-token",
+  "validateTokenUrl": "https://<SUPABASE_URL>.supabase.co/functions/v1/validate-token",
+  "supabaseUrl": "https://<SUPABASE_URL>.supabase.co",
+  "supabaseAnonKey": "<ANON_KEY>"
+}
