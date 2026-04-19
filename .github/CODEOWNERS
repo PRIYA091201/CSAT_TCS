@@ -1,0 +1,18 @@
+# Code owners — CSAT / The Chennai Silks
+# These owners are requested for review on every PR touching these paths
+
+# Global owner
+*                                   @PRIYA091201
+
+# App-specific owners
+apps/admin-dashboard/**             @PRIYA091201
+apps/kiosk/**                       @PRIYA091201
+apps/customer-form/**               @PRIYA091201
+
+# Backend / edge functions
+supabase/functions/**               @PRIYA091201
+supabase/migrations/**              @PRIYA091201
+
+# Specs / OpenSpec
+specs.md                            @PRIYA091201
+specs/**                            @PRIYA091201
