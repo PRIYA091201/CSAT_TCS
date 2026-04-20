@@ -1,0 +1,37 @@
+## Summary
+- Aligned specs.md with the kiosk MVP implementation (per-device kiosk accounts, 30s QR countdown, 10-min TTL, offline mode)
+- Added OpenSpec design and tasks artifacts under specs/open-spec/
+- Added GitHub CI workflow with typecheck, build, and spec-alignment checks for all 3 apps
+- Added PR template and CODEOWNERS
+
+## Why
+The kiosk MVP has been implemented but the SDD and OpenSpec artifacts were not updated to reflect the current state. This PR locks in the design decisions so future contributors can trace every implementation choice back to the spec.
+
+## SDD alignment
+| Change | SDD Section |
+|--------|-------------|
+| Extended MVP scope with per-device kiosks | s1 Product overview |
+| Kiosk 3-state machine (idle/QR/offline) | s4.2 Kiosk app |
+| 30s QR countdown + 10-min token TTL | s4.2, s5.2 |
+| Token state machine (active to used/expired/revoked) | s5.1 Token state machine |
+| Data contracts: zones, kiosks, tokens, feedback, audit_logs | s6.1 to s6.6 |
+| Edge functions: mint-token, validate-token, submit-feedback, expire-tokens, provision-kiosk | s7.1 to s7.5 |
+| Customer form 3 screens (demographics, ratings, confirmation) | s8.1 to s8.2 |
+| Admin provisioning and kiosk management | s9.1 to s9.2 |
+| Role-based routes (admin/md/kiosk/anon) | s15.3 |
+
+## OpenSpec artifacts updated
+- specs.md updated
+- specs/open-spec/kiosk-mvp-design.md added
+- specs/open-spec/kiosk-mvp-tasks.md added
+
+## Type of change
+- New feature + Spec/doc update
+
+## Checklist
+- TypeScript compiles (CI: typecheck job)
+- Build passes (CI: build job)
+- Spec alignment check passes (CI: spec-alignment job)
+- Edge functions present and wired
+- No secrets committed
+- Migrations are idempotent

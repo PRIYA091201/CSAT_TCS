@@ -9,7 +9,7 @@
     "preview": "vite preview --port 3000"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
+    "@supabase/supabase-js": "^2.103.3",
     "@tanstack/react-query": "^5.17.0",
     "clsx": "^2.1.0",
     "react": "^18.2.0",

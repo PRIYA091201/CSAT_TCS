@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
-import { getSupabaseClient } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
-type FormScreen = 'loading' | 'demographics' | 'ratings' | 'thankyou' | 'error' | 'timeout' | 'already-used'
+type FormScreen = 'loading' | 'no-token' | 'demographics' | 'ratings' | 'thankyou' | 'error' | 'timeout' | 'already-used'
 
 interface TokenInfo {
   token_id: string
@@ -27,16 +26,14 @@ export function CustomerForm() {
   const [errorMsg, setErrorMsg] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
 
-  const supabase = getSupabaseClient()
-
   // Parse token from URL: /f/{zone_id}/{token_id}
   useEffect(() => {
     async function validateToken() {
       const path = window.location.pathname
-      const match = path.match(/^\/f\/([^\/]+)\/([^\/]+)$/)
+      const match = path.match(/^\/f\/([^/]+)\/([^/]+)$/)
       if (!match) {
-        setErrorMsg('Invalid link')
-        setScreen('error')
+        // No token in URL — show a friendly landing page instead of error
+        setScreen('no-token')
         return
       }
 
@@ -46,7 +43,10 @@ export function CustomerForm() {
       try {
         const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-token`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
           body: JSON.stringify({ token_id })
         })
         const data = await res.json()
@@ -87,7 +87,10 @@ export function CustomerForm() {
     try {
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-feedback`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
         body: JSON.stringify({
           token_id: tokenInfo.token_id,
           gender: formData.gender || null,
@@ -122,6 +125,17 @@ export function CustomerForm() {
     return (
       <div className="min-h-screen bg-[#1a1a1a] text-white flex items-center justify-center">
         <p className="text-gray-400">Loading...</p>
+      </div>
+    )
+  }
+
+  if (screen === 'no-token') {
+    return (
+      <div className="min-h-screen bg-[#1a1a1a] text-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="text-6xl mb-4">😊</div>
+        <h1 className="text-2xl font-bold mb-2">The Chennai Silks</h1>
+        <p className="text-gray-400 mb-2">We'd love your feedback!</p>
+        <p className="text-gray-500 text-sm">Please scan the QR code at the kiosk or on your invoice to share your experience.</p>
       </div>
     )
   }
