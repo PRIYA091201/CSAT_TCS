@@ -1,0 +1,157 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, feature/**]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  typecheck:
+    name: TypeScript — ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [admin-dashboard, kiosk, customer-form]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript check — ${{ matrix.app }}
+        run: pnpm --filter @csat/${{ matrix.app }} exec tsc --noEmit
+
+  build:
+    name: Build — ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    needs: typecheck
+    strategy:
+      matrix:
+        app: [admin-dashboard, kiosk, customer-form]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build — ${{ matrix.app }}
+        run: pnpm --filter @csat/${{ matrix.app }} run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+  spec-alignment:
+    name: Spec Alignment Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check specs.md exists and has required sections
+        run: |
+          echo "Checking specs.md for required SDD sections..."
+          required_sections=(
+            "MVP scope"
+            "Token architecture"
+            "Edge Functions"
+            "Customer feedback form"
+            "Kiosk app"
+            "Admin dashboard"
+            "mint-token"
+            "validate-token"
+            "submit-feedback"
+            "expire-tokens"
+            "provision-kiosk"
+            "audit_logs"
+            "product_sections"
+            "feedback_records"
+            "zones"
+            "kiosks"
+            "tokens"
+          )
+          failed=0
+          for section in "${required_sections[@]}"; do
+            if grep -q "$section" specs.md; then
+              echo "  ✅ Found: $section"
+            else
+              echo "  ❌ Missing: $section"
+              failed=1
+            fi
+          done
+          exit $failed
+
+      - name: Check OpenSpec artifacts exist
+        run: |
+          echo "Checking OpenSpec artifacts..."
+          files=(
+            "specs/open-spec/kiosk-mvp-design.md"
+            "specs/open-spec/kiosk-mvp-tasks.md"
+          )
+          failed=0
+          for f in "${files[@]}"; do
+            if [ -f "$f" ]; then
+              echo "  ✅ Found: $f"
+            else
+              echo "  ❌ Missing: $f"
+              failed=1
+            fi
+          done
+          exit $failed
+
+      - name: Check edge functions exist
+        run: |
+          echo "Checking edge functions..."
+          functions=(
+            "supabase/functions/mint-token/index.ts"
+            "supabase/functions/validate-token/index.ts"
+            "supabase/functions/submit-feedback/index.ts"
+            "supabase/functions/expire-tokens/index.ts"
+            "supabase/functions/provision-kiosk/index.ts"
+          )
+          failed=0
+          for f in "${functions[@]}"; do
+            if [ -f "$f" ]; then
+              echo "  ✅ Found: $f"
+            else
+              echo "  ❌ Missing: $f"
+              failed=1
+            fi
+          done
+          exit $failed
+
+      - name: Check migrations exist
+        run: |
+          echo "Checking migrations..."
+          migrations=(
+            "supabase/migrations/001_schema.sql"
+            "supabase/migrations/002_rls_policies.sql"
+            "supabase/migrations/003_audit_logs.sql"
+          )
+          failed=0
+          for f in "${migrations[@]}"; do
+            if [ -f "$f" ]; then
+              echo "  ✅ Found: $f"
+            else
+              echo "  ❌ Missing: $f"
+              failed=1
+            fi
+          done
+          exit $failed

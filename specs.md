@@ -7,7 +7,7 @@
 
 The QR Feedback Experience is a customer satisfaction capture system for The Chennai Silks retail store. Customers provide emoji-based feedback (happy / okay / unhappy) across four dimensions: pricing, design, handling, and overall experience. The system operates across two zones — billing and browse — each with a distinct QR distribution method but a unified per-transaction token architecture.
 
-**MVP scope**: 1 branch (The Chennai Silks), 2 zones (billing + browse), English only, no POS integration.
+**MVP scope**: 1 branch (The Chennai Silks), 2 zones (billing + browse), English only, no POS integration. MVP includes kiosk MVP: per-device kiosk accounts on a single tablet for the browse zone, on-demand token minting via Edge Function, offline mode with 10-minute TTL per token, and a 30-second QR countdown with auto-return to idle.
 
 ---
 
@@ -101,7 +101,8 @@ The QR Feedback Experience is a customer satisfaction capture system for The Che
   - Footer: "Your response is anonymous" (tiny muted text)
 - **QR display state**: on customer tap, calls `mint-token` Edge Function → generates QR → shows live countdown
 - **Offline state**: internet connectivity lost → banner shown: "Connection lost. Please try again in a moment." → tap button disabled → polls connectivity every 10 seconds → resumes automatically when reconnected. No broken QRs, no expired tokens issued during outage.
-- **Token minting**: always requires active internet. Tokens are minted on-demand at tap time via Edge Function. No pre-minting, no local token generation. QR URL contains `token_id` that must exist in DB before customer's phone validates it.
+ - **Token minting**: always requires active internet. Tokens are minted on-demand at tap time via Edge Function. No pre-minting, no local token generation. QR URL contains `token_id` that must exist in DB before customer's phone validates it.
+- MVP detail: per-device kiosk accounts, with a single tablet in the Browse zone; admin provisions kiosk credentials; kiosk auth has access only to mint-token
 - **QR display state layout**:
   - Top-left: store name + section name (same as idle, persistent)
   - Top-right: `···` menu (IT/admin access only — not visible to customers)

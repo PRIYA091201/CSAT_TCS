@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Button } from '@/components/ui/button'
-import { getSupabaseClient } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
 type KioskState = 'idle' | 'qr-display' | 'offline'
@@ -21,8 +20,6 @@ export function KioskApp() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = getSupabaseClient()
-
   const storeName = 'The Chennai Silks'
   const sectionName = zoneConfig?.product_section ?? ''
 
@@ -32,15 +29,35 @@ export function KioskApp() {
 
   useEffect(() => {
     async function init() {
-      // Skip auth for now - just get session if exists
-      const { data: { session: s } } = await supabase.auth.getSession()
-      setSession(s)
-      if (!s) {
-        console.log('No session - will mint without auth for testing')
+      try {
+        // Use direct REST call to bypass Supabase client JWT verification
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/auth/v1/token?grant_type=password`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({
+              email: import.meta.env.VITE_KIOSK_EMAIL,
+              password: import.meta.env.VITE_KIOSK_PASSWORD,
+            }),
+          }
+        )
+        const data = await res.json()
+        if (!res.ok || !data.access_token) {
+          setError(`Login failed: ${data.error_description || data.msg || 'Unknown error'}`)
+          return
+        }
+        // Use the access token directly without client-side JWT verification
+        setSession({ access_token: data.access_token, user: data.user })
+      } catch (err: any) {
+        setError(`Login error: ${err.message}`)
       }
     }
     init()
-  }, [supabase])
+  }, [])
 
   useEffect(() => {
     // Zone config is now hardcoded, skip fetch
@@ -89,16 +106,33 @@ export function KioskApp() {
 
   async function handleMint() {
     if (!checkNetwork()) return
+    if (!session) {
+      setError('Kiosk not signed in. Reload the page.')
+      return
+    }
+    setError(null)
     setLoading(true)
     try {
-      // For now, generate a mock token locally (until backend works)
-      const mockTokenId = crypto.randomUUID()
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
-      setMintedToken({ token_id: mockTokenId, expires_at: expiresAt })
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mint-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ zone_id: zoneConfig.zone_id }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data?.token_id) {
+        setError(data?.message || 'Failed to mint token')
+        return
+      }
+      setMintedToken({ token_id: data.token_id, expires_at: data.expires_at })
       setCountdown(30)
       setState('qr-display')
     } catch (err) {
       console.error('mint-token error', err)
+      setError('Network error — please try again')
     } finally {
       setLoading(false)
     }
