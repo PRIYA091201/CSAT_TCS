@@ -27,8 +27,8 @@ const AgeGroupSchema = z.enum(['18-25', '26-35', '36-45', '46+'])
 
 const InputSchema = z.object({
   token_id:        z.string().uuid(),
-  gender:          GenderSchema.optional(),
-  age_group:       AgeGroupSchema.optional(),
+  gender:          GenderSchema.nullable().optional(),
+  age_group:       AgeGroupSchema.nullable().optional(),
   rating_price:    RatingSchema,
   rating_design:   RatingSchema,
   rating_handling: RatingSchema,
