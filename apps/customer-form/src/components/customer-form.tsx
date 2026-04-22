@@ -93,14 +93,23 @@ export function CustomerForm() {
         },
         body: JSON.stringify({
           token_id: tokenInfo.token_id,
-          gender: formData.gender || null,
-          age_group: formData.age_group || null,
+          ...(formData.gender ? { gender: formData.gender } : {}),
+          ...(formData.age_group ? { age_group: formData.age_group } : {}),
           rating_price: formData.rating_price,
           rating_design: formData.rating_design,
           rating_handling: formData.rating_handling,
           rating_overall: formData.rating_overall
         })
       })
+
+      if (!res.ok) {
+        const text = await res.text()
+        console.error('submit-feedback HTTP error:', res.status, text)
+        setErrorMsg(`Server error (${res.status})`)
+        setScreen('error')
+        return
+      }
+
       const data = await res.json()
 
       if (data?.success) {
@@ -112,7 +121,7 @@ export function CustomerForm() {
       }
     } catch (err) {
       console.error('submit-feedback error', err)
-      setErrorMsg('Network error')
+      setErrorMsg('Network error — please try again')
       setScreen('error')
     } finally {
       setSubmitting(false)
