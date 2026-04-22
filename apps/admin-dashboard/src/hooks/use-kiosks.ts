@@ -54,8 +54,14 @@ export function useProvisionKiosk() {
       zone_id: string
       branch_id: string
     }): Promise<ProvisionResult> => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('Not authenticated')
+
       const { data, error } = await supabase.functions.invoke('provision-kiosk', {
         body: input,
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       })
       if (error) throw error
       return data as ProvisionResult
