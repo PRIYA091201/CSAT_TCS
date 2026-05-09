@@ -35,7 +35,7 @@ export function MDCrossZoneView() {
       {/* Header */}
       <div className="flex items-start justify-between mb-5">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">{t('common.store_name')}</h1>
+          <img src="/logo.jpg" alt={t('common.store_name')} className="h-10 w-auto object-contain rounded" />
           <p className="text-xs text-muted-foreground mt-0.5">{t('md.role_label')}</p>
         </div>
         <DateFilterTabs value={dateRange} onChange={setDateRange} />

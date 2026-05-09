@@ -1,0 +1,15 @@
+{
+  "name": "The Chennai Silks - Kiosk",
+  "short_name": "TCS Kiosk",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5C518",
+  "theme_color": "#F5C518",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "type": "image/png",
+      "sizes": "any"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "The Chennai Silks - Feedback",
+  "short_name": "TCS Feedback",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5C518",
+  "theme_color": "#F5C518",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "type": "image/png",
+      "sizes": "any"
+    }
+  ]
+}

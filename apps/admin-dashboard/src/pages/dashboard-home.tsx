@@ -16,18 +16,18 @@ export function DashboardHome() {
 
   return (
     <div>
-      <PageHeader
-        title={t('common.store_name')}
-        subtitle="Store Admin — select a zone to view its dashboard"
-        action={
-          <Link
-            to="/zones"
-            className="px-4 py-2 rounded-md bg-secondary border border-border text-sm text-foreground hover:bg-card transition-colors"
-          >
-            Manage zones →
-          </Link>
-        }
-      />
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <img src="/logo.jpg" alt={t('common.store_name')} className="h-10 w-auto object-contain rounded" />
+          <p className="text-sm text-muted-foreground mt-1">Store Admin — select a zone to view its dashboard</p>
+        </div>
+        <Link
+          to="/zones"
+          className="px-4 py-2 rounded-md bg-secondary border border-border text-sm text-foreground hover:bg-card transition-colors"
+        >
+          Manage zones →
+        </Link>
+      </div>
 
       {isLoading && (
         <p className="text-muted-foreground text-sm">{t('common.loading')}</p>
