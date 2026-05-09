@@ -131,15 +131,17 @@ export function CustomerForm() {
 
   if (screen === 'no-token') {
     return (
-      <div className="min-h-screen bg-[#1a1a1a] text-white flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen bg-[#1a1a1a] text-white flex flex-col p-6 text-center relative">
         <img
           src="/logo.jpg"
           alt="The Chennai Silks"
-          className="h-14 w-auto object-contain rounded mb-6"
+          className="h-10 w-auto object-contain rounded absolute top-6 left-6"
         />
-        <div className="text-6xl mb-4">😊</div>
-        <p className="text-gray-400 mb-2">We'd love your feedback!</p>
-        <p className="text-gray-500 text-sm">Please scan the QR code at the kiosk or on your invoice to share your experience.</p>
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <div className="text-6xl mb-4">😊</div>
+          <p className="text-gray-400 mb-2">We'd love your feedback!</p>
+          <p className="text-gray-500 text-sm">Please scan the QR code at the kiosk or on your invoice to share your experience.</p>
+        </div>
       </div>
     )
   }
