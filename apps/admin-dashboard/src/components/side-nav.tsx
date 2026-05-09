@@ -36,15 +36,14 @@ export function SideNav({ role }: SideNavProps) {
       aria-label="Main navigation"
     >
       {/* Store logo */}
-      <div className="px-2 mb-6 flex items-center gap-2">
+      <div className="px-2 mb-6">
         <img
-          src="/logo.png"
+          src="/logo.jpg"
           alt="The Chennai Silks"
-          className="h-9 w-9 object-contain"
+          className="h-10 w-auto object-contain rounded"
         />
-        <span className="text-sm font-semibold text-foreground">The Chennai Silks</span>
         {role === 'md' && (
-          <p className="text-xs text-muted-foreground mt-0.5">{t('md.role_label')}</p>
+          <p className="text-xs text-muted-foreground mt-1">{t('md.role_label')}</p>
         )}
       </div>
 

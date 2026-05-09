@@ -152,12 +152,11 @@ export function KioskApp() {
         {/* Header: Store Logo + Section */}
         <div className="absolute top-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
           <img
-            src="/logo.png"
+            src="/logo.jpg"
             alt={storeName}
-            className="h-14 w-14 object-contain"
+            className="h-12 w-auto object-contain rounded"
           />
-          <h1 className="text-lg font-bold text-white mt-1">{storeName}</h1>
-          {sectionName && <p className="text-sm text-gray-400">{sectionName}</p>}
+          {sectionName && <p className="text-sm text-gray-400 mt-1">{sectionName}</p>}
         </div>
 
         {state === 'idle' && (

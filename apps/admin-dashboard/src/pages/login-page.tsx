@@ -53,7 +53,7 @@ export function LoginPage() {
 
         {/* Store name header */}
         <div className="mb-8 text-center">
-          <img src="/logo.png" alt="The Chennai Silks" className="w-16 h-16 mx-auto mb-4 object-contain" />
+          <img src="/logo.jpg" alt="The Chennai Silks" className="h-12 w-auto mx-auto mb-4 object-contain rounded" />
           <h1 className="text-xl font-semibold text-foreground">{t('auth.title')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t('auth.subtitle')}</p>
         </div>
