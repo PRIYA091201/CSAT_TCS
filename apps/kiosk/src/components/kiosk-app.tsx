@@ -152,7 +152,7 @@ export function KioskApp() {
         {/* Header: Store Logo + Section */}
         <div className="absolute top-6 left-6">
           <img
-            src="/logo.svg"
+            src="/logo.jpg"
             alt={storeName}
             className="h-8 w-auto object-contain"
             onError={(e) => {

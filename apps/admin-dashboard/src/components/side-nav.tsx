@@ -38,7 +38,7 @@ export function SideNav({ role }: SideNavProps) {
       {/* Store logo */}
       <div className="px-2 mb-6">
         <img
-          src="/logo.svg"
+          src="/logo.jpg"
           alt="The Chennai Silks"
           className="h-8 w-auto object-contain"
           onError={(e) => {
