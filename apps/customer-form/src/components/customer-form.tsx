@@ -135,17 +135,9 @@ export function CustomerForm() {
         <img
           src="/logo.jpg"
           alt="The Chennai Silks"
-          className="h-12 w-auto object-contain mb-6"
-          onError={(e) => {
-            const target = e.currentTarget as HTMLImageElement
-            target.style.display = 'none'
-            const fallback = target.nextElementSibling as HTMLElement
-            if (fallback) fallback.style.display = 'block'
-          }}
+          className="h-14 w-auto object-contain rounded mb-6"
         />
-        <p className="text-sm font-semibold text-white hidden">The Chennai Silks</p>
         <div className="text-6xl mb-4">😊</div>
-        <h1 className="text-2xl font-bold mb-2">The Chennai Silks</h1>
         <p className="text-gray-400 mb-2">We'd love your feedback!</p>
         <p className="text-gray-500 text-sm">Please scan the QR code at the kiosk or on your invoice to share your experience.</p>
       </div>
