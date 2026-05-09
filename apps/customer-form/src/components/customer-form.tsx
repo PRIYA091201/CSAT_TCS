@@ -132,6 +132,18 @@ export function CustomerForm() {
   if (screen === 'no-token') {
     return (
       <div className="min-h-screen bg-[#1a1a1a] text-white flex flex-col items-center justify-center p-6 text-center">
+        <img
+          src="/logo.svg"
+          alt="The Chennai Silks"
+          className="h-12 w-auto object-contain mb-6"
+          onError={(e) => {
+            const target = e.currentTarget as HTMLImageElement
+            target.style.display = 'none'
+            const fallback = target.nextElementSibling as HTMLElement
+            if (fallback) fallback.style.display = 'block'
+          }}
+        />
+        <p className="text-sm font-semibold text-white hidden">The Chennai Silks</p>
         <div className="text-6xl mb-4">😊</div>
         <h1 className="text-2xl font-bold mb-2">The Chennai Silks</h1>
         <p className="text-gray-400 mb-2">We'd love your feedback!</p>
@@ -143,6 +155,18 @@ export function CustomerForm() {
   if (screen === 'error' || screen === 'timeout' || screen === 'already-used') {
     return (
       <div className="min-h-screen bg-[#1a1a1a] text-white flex flex-col items-center justify-center p-6 text-center">
+        <img
+          src="/logo.svg"
+          alt="The Chennai Silks"
+          className="h-12 w-auto object-contain mb-6"
+          onError={(e) => {
+            const target = e.currentTarget as HTMLImageElement
+            target.style.display = 'none'
+            const fallback = target.nextElementSibling as HTMLElement
+            if (fallback) fallback.style.display = 'block'
+          }}
+        />
+        <p className="text-sm font-semibold text-white hidden">The Chennai Silks</p>
         <div className="text-6xl mb-4">{screen === 'already-used' ? '✅' : '⏰'}</div>
         <h1 className="text-xl font-bold mb-2">
           {screen === 'already-used' && 'Thanks! We have already received your feedback.'}
@@ -160,9 +184,20 @@ export function CustomerForm() {
   if (screen === 'thankyou') {
     return (
       <div className="min-h-screen bg-[#1a1a1a] text-white flex flex-col items-center justify-center p-6 text-center">
+        <img
+          src="/logo.svg"
+          alt="The Chennai Silks"
+          className="h-10 w-auto object-contain mb-4"
+          onError={(e) => {
+            const target = e.currentTarget as HTMLImageElement
+            target.style.display = 'none'
+            const fallback = target.nextElementSibling as HTMLElement
+            if (fallback) fallback.style.display = 'block'
+          }}
+        />
+        <p className="text-sm font-semibold text-white hidden">The Chennai Silks</p>
         <div className="text-6xl mb-4">🙏</div>
         <h1 className="text-2xl font-bold mb-2">Thank you for your feedback!</h1>
-        <p className="text-gray-400">The Chennai Silks</p>
       </div>
     )
   }
@@ -172,7 +207,18 @@ export function CustomerForm() {
     return (
       <div className="min-h-screen bg-[#1a1a1a] text-white flex flex-col p-6">
         <div className="mb-6">
-          <p className="text-sm text-gray-400">The Chennai Silks</p>
+          <img
+            src="/logo.svg"
+            alt="The Chennai Silks"
+            className="h-8 w-auto object-contain mb-2"
+            onError={(e) => {
+              const target = e.currentTarget as HTMLImageElement
+              target.style.display = 'none'
+              const fallback = target.nextElementSibling as HTMLElement
+              if (fallback) fallback.style.display = 'block'
+            }}
+          />
+          <p className="text-sm font-semibold text-white hidden">The Chennai Silks</p>
           <h1 className="text-xl font-bold">How was your experience?</h1>
         </div>
 
@@ -241,7 +287,18 @@ export function CustomerForm() {
     return (
       <div className="min-h-screen bg-[#1a1a1a] text-white flex flex-col p-6">
         <div className="mb-4">
-          <p className="text-sm text-gray-400">The Chennai Silks</p>
+          <img
+            src="/logo.svg"
+            alt="The Chennai Silks"
+            className="h-8 w-auto object-contain mb-2"
+            onError={(e) => {
+              const target = e.currentTarget as HTMLImageElement
+              target.style.display = 'none'
+              const fallback = target.nextElementSibling as HTMLElement
+              if (fallback) fallback.style.display = 'block'
+            }}
+          />
+          <p className="text-sm font-semibold text-white hidden">The Chennai Silks</p>
           <h1 className="text-xl font-bold">How was your experience?</h1>
           <p className="text-sm text-gray-500">Tap one per row</p>
         </div>

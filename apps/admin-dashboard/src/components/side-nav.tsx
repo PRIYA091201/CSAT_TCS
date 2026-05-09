@@ -35,9 +35,20 @@ export function SideNav({ role }: SideNavProps) {
       className="w-52 shrink-0 flex flex-col border-r border-border bg-card px-3 py-4"
       aria-label="Main navigation"
     >
-      {/* Store name */}
+      {/* Store logo */}
       <div className="px-2 mb-6">
-        <p className="text-sm font-semibold text-foreground">{t('common.store_name')}</p>
+        <img
+          src="/logo.svg"
+          alt="The Chennai Silks"
+          className="h-8 w-auto object-contain"
+          onError={(e) => {
+            const target = e.currentTarget as HTMLImageElement
+            target.style.display = 'none'
+            const fallback = target.nextElementSibling as HTMLElement
+            if (fallback) fallback.style.display = 'block'
+          }}
+        />
+        <p className="text-sm font-semibold text-foreground hidden">{t('common.store_name')}</p>
         {role === 'md' && (
           <p className="text-xs text-muted-foreground mt-0.5">{t('md.role_label')}</p>
         )}

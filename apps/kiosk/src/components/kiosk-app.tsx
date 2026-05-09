@@ -149,9 +149,20 @@ export function KioskApp() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center p-6">
-        {/* Header: Store Name + Section */}
+        {/* Header: Store Logo + Section */}
         <div className="absolute top-6 left-6">
-          <h1 className="text-xl font-bold text-white">{storeName}</h1>
+          <img
+            src="/logo.svg"
+            alt={storeName}
+            className="h-8 w-auto object-contain"
+            onError={(e) => {
+              const target = e.currentTarget as HTMLImageElement
+              target.style.display = 'none'
+              const fallback = target.nextElementSibling as HTMLElement
+              if (fallback) fallback.style.display = 'block'
+            }}
+          />
+          <h1 className="text-xl font-bold text-white hidden">{storeName}</h1>
           {sectionName && <p className="text-sm text-gray-400">{sectionName}</p>}
         </div>
 
