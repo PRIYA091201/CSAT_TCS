@@ -133,7 +133,7 @@ export function CustomerForm() {
     return (
       <div className="min-h-screen bg-[#1a1a1a] text-white flex flex-col items-center justify-center p-6 text-center">
         <img
-          src="/logo.jpg"
+          src="/logo.png"
           alt="The Chennai Silks"
           className="h-12 w-auto object-contain mb-6"
           onError={(e) => {
@@ -156,7 +156,7 @@ export function CustomerForm() {
     return (
       <div className="min-h-screen bg-[#1a1a1a] text-white flex flex-col items-center justify-center p-6 text-center">
         <img
-          src="/logo.jpg"
+          src="/logo.png"
           alt="The Chennai Silks"
           className="h-12 w-auto object-contain mb-6"
           onError={(e) => {
@@ -185,7 +185,7 @@ export function CustomerForm() {
     return (
       <div className="min-h-screen bg-[#1a1a1a] text-white flex flex-col items-center justify-center p-6 text-center">
         <img
-          src="/logo.jpg"
+          src="/logo.png"
           alt="The Chennai Silks"
           className="h-10 w-auto object-contain mb-4"
           onError={(e) => {
@@ -208,7 +208,7 @@ export function CustomerForm() {
       <div className="min-h-screen bg-[#1a1a1a] text-white flex flex-col p-6">
         <div className="mb-6">
           <img
-            src="/logo.jpg"
+            src="/logo.png"
             alt="The Chennai Silks"
             className="h-8 w-auto object-contain mb-2"
             onError={(e) => {
@@ -288,7 +288,7 @@ export function CustomerForm() {
       <div className="min-h-screen bg-[#1a1a1a] text-white flex flex-col p-6">
         <div className="mb-4">
           <img
-            src="/logo.jpg"
+            src="/logo.png"
             alt="The Chennai Silks"
             className="h-8 w-auto object-contain mb-2"
             onError={(e) => {

@@ -36,19 +36,13 @@ export function SideNav({ role }: SideNavProps) {
       aria-label="Main navigation"
     >
       {/* Store logo */}
-      <div className="px-2 mb-6">
+      <div className="px-2 mb-6 flex items-center gap-2">
         <img
-          src="/logo.jpg"
+          src="/logo.png"
           alt="The Chennai Silks"
-          className="h-8 w-auto object-contain"
-          onError={(e) => {
-            const target = e.currentTarget as HTMLImageElement
-            target.style.display = 'none'
-            const fallback = target.nextElementSibling as HTMLElement
-            if (fallback) fallback.style.display = 'block'
-          }}
+          className="h-9 w-9 object-contain"
         />
-        <p className="text-sm font-semibold text-foreground hidden">{t('common.store_name')}</p>
+        <span className="text-sm font-semibold text-foreground">The Chennai Silks</span>
         {role === 'md' && (
           <p className="text-xs text-muted-foreground mt-0.5">{t('md.role_label')}</p>
         )}
